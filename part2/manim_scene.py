@@ -6,7 +6,6 @@ A = [[2.0, 1.0], [0.0, 3.0]]
 def to_3d(v):
     return [v[0], v[1], 0]
 
-# Tạo ma trận dạng Text (không LaTeX)
 def create_matrix_text(matrix):
     rows = []
     for row in matrix:
