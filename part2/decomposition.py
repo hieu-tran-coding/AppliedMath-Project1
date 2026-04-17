@@ -1,37 +1,37 @@
 """
 decomposition.py
 ================
-Phân rã SVD (Singular Value Decomposition) cài đặt từ đầu (from scratch).
+SVD Decomposition (Singular Value Decomposition) implemented from scratch.
 
 """
 
 import math
 
 # =============================================================================
-# PHẦN 0: CÁC PHÉP TOÁN MA TRẬN CƠ BẢN
+# PART 0: BASIC MATRIX OPERATIONS
 # =============================================================================
 
 def mat_zeros(m: int, n: int) -> list[list[float]]:
-    """Tạo ma trận 0 kích thước m x n."""
+    """Create an m x n zero matrix."""
     return [[0.0] * n for _ in range(m)]
 
 def mat_identity(n: int) -> list[list[float]]:
-    """Tạo ma trận đơn vị n x n."""
+    """Create an n x n identity matrix."""
     I = mat_zeros(n, n)
     for i in range(n):
         I[i][i] = 1.0
     return I
 
 def mat_copy(A: list[list[float]]) -> list[list[float]]:
-    """Sao chép ma trận."""
+    """Copy a matrix."""
     return [row[:] for row in A]
 
 def mat_shape(A: list[list[float]]) -> tuple[int, int]:
-    """Trả về (số hàng, số cột) của ma trận."""
+    """Return (rows, columns) of a matrix."""
     return len(A), len(A[0])
 
 def mat_transpose(A: list[list[float]]) -> list[list[float]]:
-    """Chuyển vị ma trận A."""
+    """Transpose matrix A."""
     m, n = mat_shape(A)
     T = mat_zeros(n, m)
     for i in range(m):
@@ -40,10 +40,10 @@ def mat_transpose(A: list[list[float]]) -> list[list[float]]:
     return T
 
 def mat_mul(A: list[list[float]], B: list[list[float]]) -> list[list[float]]:
-    """Nhân hai ma trận A (m x k) và B (k x n)."""
+    """Multiply two matrices A (m x k) and B (k x n)."""
     m, k = mat_shape(A)
     k2, n = mat_shape(B)
-    assert k == k2, f"Kích thước không khớp: ({m}x{k}) @ ({k2}x{n})"
+    assert k == k2, f"Size mismatch: ({m}x{k}) @ ({k2}x{n})"
     C = mat_zeros(m, n)
     for i in range(m):
         for j in range(n):
@@ -54,7 +54,7 @@ def mat_mul(A: list[list[float]], B: list[list[float]]) -> list[list[float]]:
     return C
 
 def mat_sub(A: list[list[float]], B: list[list[float]]) -> list[list[float]]:
-    """Trừ hai ma trận cùng kích thước."""
+    """Subtract two matrices of the same size."""
     m, n = mat_shape(A)
     C = mat_zeros(m, n)
     for i in range(m):
@@ -63,7 +63,7 @@ def mat_sub(A: list[list[float]], B: list[list[float]]) -> list[list[float]]:
     return C
 
 def mat_add(A: list[list[float]], B: list[list[float]]) -> list[list[float]]:
-    """Cộng hai ma trận cùng kích thước."""
+    """Add two matrices of the same size."""
     m, n = mat_shape(A)
     C = mat_zeros(m, n)
     for i in range(m):
@@ -72,7 +72,7 @@ def mat_add(A: list[list[float]], B: list[list[float]]) -> list[list[float]]:
     return C
 
 def mat_scale(A: list[list[float]], c: float) -> list[list[float]]:
-    """Nhân ma trận với hằng số c."""
+    """Multiply a matrix by a scalar c."""
     m, n = mat_shape(A)
     C = mat_zeros(m, n)
     for i in range(m):
@@ -81,7 +81,7 @@ def mat_scale(A: list[list[float]], c: float) -> list[list[float]]:
     return C
 
 def mat_frobenius_norm(A: list[list[float]]) -> float:
-    """Chuẩn Frobenius của ma trận."""
+    """Frobenius norm of a matrix."""
     m, n = mat_shape(A)
     s = 0.0
     for i in range(m):
@@ -90,36 +90,36 @@ def mat_frobenius_norm(A: list[list[float]]) -> float:
     return math.sqrt(s)
 
 def vec_dot(u: list[float], v: list[float]) -> float:
-    """Tích vô hướng của hai vector."""
+    """Dot product of two vectors."""
     return sum(x * y for x, y in zip(u, v))
 
 def vec_norm(v: list[float]) -> float:
-    """Chuẩn Euclidean của vector."""
+    """Euclidean norm of a vector."""
     return math.sqrt(vec_dot(v, v))
 
 def vec_scale(v: list[float], c: float) -> list[float]:
-    """Nhân vector với hằng số."""
+    """Multiply a vector by a scalar."""
     return [x * c for x in v]
 
 def vec_sub(u: list[float], v: list[float]) -> list[float]:
-    """Trừ hai vector."""
+    """Subtract two vectors."""
     return [a - b for a, b in zip(u, v)]
 
 def mat_col(A: list[list[float]], j: int) -> list[float]:
-    """Lấy cột j của ma trận dưới dạng vector."""
+    """Extract column j of a matrix as a vector."""
     return [A[i][j] for i in range(len(A))]
 
 def mat_row(A: list[list[float]], i: int) -> list[float]:
-    """Lấy hàng i của ma trận dưới dạng vector."""
+    """Extract row i of a matrix as a vector."""
     return A[i][:]
 
 def mat_set_col(A: list[list[float]], j: int, v: list[float]) -> None:
-    """Gán cột j của ma trận bằng vector v (in-place)."""
+    """Set column j of a matrix to vector v (in-place)."""
     for i in range(len(v)):
         A[i][j] = v[i]
 
 def mat_diag(v: list[float]) -> list[list[float]]:
-    """Tạo ma trận đường chéo từ vector v."""
+    """Create a diagonal matrix from vector v."""
     n = len(v)
     D = mat_zeros(n, n)
     for i in range(n):
@@ -127,7 +127,7 @@ def mat_diag(v: list[float]) -> list[list[float]]:
     return D
 
 def print_matrix(A: list[list[float]], name: str = "A", decimals: int = 6) -> None:
-    """In ma trận ra màn hình."""
+    """Print the matrix to the console."""
     m, n = mat_shape(A)
     print(f"{name} ({m}x{n}):")
     for row in A:
@@ -135,20 +135,20 @@ def print_matrix(A: list[list[float]], name: str = "A", decimals: int = 6) -> No
 
 
 # =============================================================================
-# PHẦN 1: PHÂN RÃ QR BẰNG GRAM-SCHMIDT (dùng nội bộ cho QR iteration)
+# PART 1: QR DECOMPOSITION USING GRAM-SCHMIDT (internal use for QR iteration)
 # =============================================================================
 
 def qr_gram_schmidt(A: list[list[float]]) -> tuple[list[list[float]], list[list[float]]]:
     """
-    Phân rã QR bằng phương pháp Gram-Schmidt cổ điển.
+    QR decomposition using the classical Gram-Schmidt method.
     A = Q @ R
-    - Q: ma trận trực chuẩn (cột trực giao, chuẩn bằng 1)
-    - R: ma trận tam giác trên
+    - Q: orthonormal matrix (orthogonal columns, unit norm)
+    - R: upper triangular matrix
 
-    Tham số:
-        A: ma trận đầu vào m x n (m >= n)
+    Parameters:
+        A: input matrix m x n (m >= n)
 
-    Trả về:
+    Returns:
         Q (m x n), R (n x n)
     """
     m, n = mat_shape(A)
@@ -156,20 +156,20 @@ def qr_gram_schmidt(A: list[list[float]]) -> tuple[list[list[float]], list[list[
     R = mat_zeros(n, n)
 
     for j in range(n):
-        # Lấy cột j của A
+        # Extract column j of A
         v = mat_col(A, j)
 
-        # Trừ đi hình chiếu lên các cột trước đó của Q
+        # Subtract projection onto previous columns of Q
         for i in range(j):
             q_i = mat_col(Q, i)
             R[i][j] = vec_dot(q_i, v)
             proj = vec_scale(q_i, R[i][j])
             v = vec_sub(v, proj)
 
-        # Chuẩn hóa
+        # Normalize
         norm_v = vec_norm(v)
         if norm_v < 1e-12:
-            # Cột phụ thuộc tuyến tính — điền vector 0
+            # Linearly dependent column — fill with zero vector
             R[j][j] = 0.0
         else:
             R[j][j] = norm_v
@@ -181,41 +181,41 @@ def qr_gram_schmidt(A: list[list[float]]) -> tuple[list[list[float]], list[list[
 
 
 # =============================================================================
-# PHẦN 2: THUẬT TOÁN QR LẶP — TÌM EIGENVALUES VÀ EIGENVECTORS
+# PART 2: QR ITERATION ALGORITHM — FIND EIGENVALUES AND EIGENVECTORS
 # =============================================================================
 
 def _qr_iteration(A: list[list[float]], max_iter: int = 1000, tol: float = 1e-10):
     """
-    Thuật toán QR lặp (QR Algorithm) để tìm eigenvalues và eigenvectors
-    của ma trận đối xứng (symmetric matrix).
+    QR Iteration algorithm to find eigenvalues and eigenvectors
+    of a symmetric matrix.
 
-    Ý tưởng:
+    Idea:
         A₀ = A
-        Aₖ = Qₖ Rₖ  (phân rã QR)
+        Aₖ = Qₖ Rₖ  (QR decomposition)
         A_{k+1} = Rₖ Qₖ
-        → Aₖ hội tụ về ma trận đường chéo chứa eigenvalues
+        → Aₖ converges to a diagonal matrix containing eigenvalues
 
-    Eigenvectors được tích lũy qua: V = Q₀ Q₁ Q₂ ...
+    Eigenvectors are accumulated via: V = Q₀ Q₁ Q₂ ...
 
-    Tham số:
-        A        : ma trận đối xứng n x n
-        max_iter : số vòng lặp tối đa
-        tol      : ngưỡng hội tụ (dựa trên tổng bình phương phần tử dưới đường chéo)
+    Parameters:
+        A        : symmetric matrix n x n
+        max_iter : maximum number of iterations
+        tol      : convergence threshold (based on sum of squared sub-diagonal elements)
 
-    Trả về:
+    Returns:
         eigenvalues  : list[float]
-        eigenvectors : list[list[float]]  — mỗi CỘT là một eigenvector
+        eigenvectors : list[list[float]]  — each COLUMN is an eigenvector
     """
     n, _ = mat_shape(A)
     Ak = mat_copy(A)
-    V  = mat_identity(n)   # tích lũy eigenvectors
+    V  = mat_identity(n)   # accumulate eigenvectors
 
     for iteration in range(max_iter):
         Q, R = qr_gram_schmidt(Ak)
         Ak = mat_mul(R, Q)          # A_{k+1} = R_k Q_k
-        V  = mat_mul(V, Q)          # tích lũy eigenvectors
+        V  = mat_mul(V, Q)          # accumulate eigenvectors
 
-        # Kiểm tra hội tụ: tổng bình phương phần tử dưới đường chéo chính
+        # Check convergence: sum of squares of sub-diagonal elements
         off_diag = 0.0
         for i in range(n):
             for j in range(i):
@@ -228,14 +228,14 @@ def _qr_iteration(A: list[list[float]], max_iter: int = 1000, tol: float = 1e-10
 
 
 # =============================================================================
-# PHẦN 3: SẮP XẾP EIGENVALUES VÀ EIGENVECTORS GIẢM DẦN
+# PART 3: SORT EIGENVALUES AND EIGENVECTORS IN DESCENDING ORDER
 # =============================================================================
 
 def _sort_eigen(eigenvalues: list[float], eigenvectors: list[list[float]]):
     """
-    Sắp xếp eigenvalues giảm dần và sắp xếp cột eigenvectors tương ứng.
+    Sort eigenvalues in descending order and sort corresponding eigenvector columns.
 
-    Trả về:
+    Returns:
         sorted_values  : list[float]
         sorted_vectors : list[list[float]]
     """
@@ -253,74 +253,74 @@ def _sort_eigen(eigenvalues: list[float], eigenvectors: list[list[float]]):
 
 
 # =============================================================================
-# PHẦN 4: PHÂN RÃ SVD CHÍNH
+# PART 4: MAIN SVD DECOMPOSITION
 # =============================================================================
 
 def svd(A: list[list[float]], max_iter: int = 1000, tol: float = 1e-10):
     """
-    Phân rã SVD từ đầu (from scratch): A = U @ Sigma @ V^T
+    SVD decomposition from scratch: A = U @ Sigma @ V^T
 
-    Thuật toán:
-        1. Tính B = AᵀA  (ma trận đối xứng, semi-definite dương)
-        2. Dùng QR iteration tìm eigenvalues λᵢ và eigenvectors V của B
+    Algorithm:
+        1. Compute B = AᵀA  (symmetric, positive semi-definite matrix)
+        2. Use QR iteration to find eigenvalues λᵢ and eigenvectors V of B
         3. Singular values: σᵢ = √λᵢ
         4. Left singular vectors: uᵢ = A @ vᵢ / σᵢ
 
-    Tham số:
-        A        : ma trận đầu vào m x n
-        max_iter : số vòng lặp tối đa cho QR iteration
-        tol      : ngưỡng hội tụ
+    Parameters:
+        A        : input matrix m x n
+        max_iter : maximum iterations for QR iteration
+        tol      : convergence threshold
 
-    Trả về:
-        U     : ma trận m x m (left singular vectors)
-        sigma : list singular values (giảm dần)
-        Vt    : ma trận n x n = V^T (right singular vectors)
+    Returns:
+        U     : matrix m x m (left singular vectors)
+        sigma : list of singular values (descending)
+        Vt    : matrix n x n = V^T (right singular vectors)
     """
     m, n = mat_shape(A)
 
     # -----------------------------------------------------------------------
-    # Bước 1: Tính B = AᵀA
+    # Step 1: Compute B = AᵀA
     # -----------------------------------------------------------------------
     At = mat_transpose(A)
-    B  = mat_mul(At, A)          # n x n, đối xứng, semi-definite dương
+    B  = mat_mul(At, A)          # n x n, symmetric, positive semi-definite
 
     # -----------------------------------------------------------------------
-    # Bước 2: QR iteration trên B → eigenvalues của AᵀA + eigenvectors V
+    # Step 2: QR iteration on B → eigenvalues of AᵀA + eigenvectors V
     # -----------------------------------------------------------------------
     eigenvalues_B, V = _qr_iteration(B, max_iter=max_iter, tol=tol)
 
-    # Kẹp về 0 để tránh căn âm do sai số làm tròn
+    # Clamp to 0 to avoid negative square roots due to rounding errors
     eigenvalues_B = [max(0.0, lam) for lam in eigenvalues_B]
 
     # -----------------------------------------------------------------------
-    # Bước 3: Sắp xếp giảm dần
+    # Step 3: Sort in descending order
     # -----------------------------------------------------------------------
     eigenvalues_B, V = _sort_eigen(eigenvalues_B, V)
 
     # -----------------------------------------------------------------------
-    # Bước 4: Tính singular values σᵢ = √λᵢ
+    # Step 4: Compute singular values σᵢ = √λᵢ
     # -----------------------------------------------------------------------
     sigma = [math.sqrt(lam) for lam in eigenvalues_B]
 
     # -----------------------------------------------------------------------
-    # Bước 5: Tính U — left singular vectors
-    #   uᵢ = A @ vᵢ / σᵢ  (với σᵢ > 0)
-    #   Với σᵢ ≈ 0: bổ sung vector trực giao tùy ý (Gram-Schmidt trên U)
+    # Step 5: Compute U — left singular vectors
+    #   uᵢ = A @ vᵢ / σᵢ  (for σᵢ > 0)
+    #   For σᵢ ≈ 0: supplement with arbitrary orthogonal vectors (Gram-Schmidt on U)
     # -----------------------------------------------------------------------
     rank = sum(1 for s in sigma if s > tol)
 
     U = mat_zeros(m, m)
 
-    # Tính u cho các singular value khác 0
+    # Compute u for non-zero singular values
     for j in range(rank):
         vj  = mat_col(V, j)
         Avj = [sum(A[i][k] * vj[k] for k in range(n)) for i in range(m)]
         uj  = vec_scale(Avj, 1.0 / sigma[j])
         mat_set_col(U, j, uj)
 
-    # Gram-Schmidt để hoàn thiện U với các cột còn lại (null space của Aᵀ)
+    # Gram-Schmidt to complete U with remaining columns (null space of Aᵀ)
     if rank < m:
-        # Khởi tạo các cột còn lại bằng vector chuẩn e_j
+        # Initialize remaining columns with standard basis vectors e_j
         candidate_idx = 0
         for j in range(rank, m):
             while candidate_idx < m:
@@ -328,7 +328,7 @@ def svd(A: list[list[float]], max_iter: int = 1000, tol: float = 1e-10):
                 e[candidate_idx] = 1.0
                 candidate_idx += 1
 
-                # Trừ hình chiếu lên các cột đã có trong U
+                # Subtract projection onto existing columns in U
                 v = e[:]
                 for k in range(j):
                     uk = mat_col(U, k)
@@ -341,34 +341,34 @@ def svd(A: list[list[float]], max_iter: int = 1000, tol: float = 1e-10):
                     break
 
     # -----------------------------------------------------------------------
-    # Bước 6: Chuẩn bị Vt = V^T và Sigma đầy đủ m x n
+    # Step 6: Prepare Vt = V^T and full Sigma m x n
     # -----------------------------------------------------------------------
     Vt    = mat_transpose(V)
     p     = min(m, n)
-    sigma = sigma[:p]   # chỉ giữ p singular values
+    sigma = sigma[:p]   # keep only p singular values
 
     return U, sigma, Vt
 
 
 # =============================================================================
-# PHẦN 5: XẤP XỈ HẠNG THẤP (Low-rank Approximation)
+# PART 5: LOW-RANK APPROXIMATION
 # =============================================================================
 
 def low_rank_approximation(U, sigma, Vt, k: int) -> list[list[float]]:
     """
-    Tính xấp xỉ hạng k của ma trận A:
+    Compute rank-k approximation of matrix A:
         Aₖ = Σᵢ₌₁ᵏ σᵢ · uᵢ · vᵢᵀ
 
-    Đây là xấp xỉ tốt nhất hạng k theo chuẩn Frobenius (Định lý Eckart-Young).
+    This is the best rank-k approximation under the Frobenius norm (Eckart-Young Theorem).
 
-    Tham số:
+    Parameters:
         U     : left singular vectors (m x m)
-        sigma : list singular values
+        sigma : list of singular values
         Vt    : right singular vectors^T (n x n)
-        k     : hạng xấp xỉ
+        k     : approximation rank
 
-    Trả về:
-        Ak : ma trận xấp xỉ hạng k (m x n)
+    Returns:
+        Ak : rank-k approximation matrix (m x n)
     """
     m = len(U)
     n = len(Vt[0])
@@ -376,8 +376,8 @@ def low_rank_approximation(U, sigma, Vt, k: int) -> list[list[float]]:
 
     k = min(k, len(sigma))
     for i in range(k):
-        ui = mat_col(U, i)           # vector cột m x 1
-        vi = mat_row(Vt, i)          # vector hàng 1 x n  (= vᵢᵀ)
+        ui = mat_col(U, i)           # column vector m x 1
+        vi = mat_row(Vt, i)          # row vector 1 x n  (= vᵢᵀ)
 
         # Outer product: uᵢ @ vᵢᵀ  (rank-1 matrix)
         for r in range(m):
@@ -388,23 +388,23 @@ def low_rank_approximation(U, sigma, Vt, k: int) -> list[list[float]]:
 
 
 # =============================================================================
-# PHẦN 7: KIỂM CHỨNG (dùng numpy chỉ để verify)
+# PART 7: VERIFICATION (uses numpy only for verifying)
 # =============================================================================
 
 def verify_svd(A_orig: list[list[float]], U, sigma, Vt, tol: float = 1e-6) -> bool:
     """
-    Kiểm chứng kết quả SVD bằng cách tái tạo A từ U, Sigma, Vt
-    và so sánh sai số tương đối.
+    Verify SVD result by reconstructing A from U, Sigma, Vt
+    and comparing relative error.
 
-    Không dùng numpy — tính thuần túy bằng phép toán ma trận tự cài đặt.
+    Do not use numpy — compute purely using self-implemented matrix operations.
 
-    Trả về:
-        True nếu ||A - U Σ Vᵀ||_F / ||A||_F < tol
+    Returns:
+        True if ||A - U Σ Vᵀ||_F / ||A||_F < tol
     """
     m, n = mat_shape(A_orig)
     p = len(sigma)
 
-    # Tái tạo A_approx = U @ Sigma_full @ Vt
+    # Reconstruct A_approx = U @ Sigma_full @ Vt
     Sigma_full = mat_zeros(m, n)
     for i in range(p):
         Sigma_full[i][i] = sigma[i]
@@ -421,7 +421,7 @@ def verify_svd(A_orig: list[list[float]], U, sigma, Vt, tol: float = 1e-6) -> bo
 
 def verify_orthogonal(M: list[list[float]], name: str = "M", tol: float = 1e-6) -> bool:
     """
-    Kiểm tra tính trực giao: M^T @ M ≈ I
+    Check orthogonality: M^T @ M ≈ I
     """
     n, _ = mat_shape(M)
     Mt  = mat_transpose(M)
@@ -435,7 +435,7 @@ def verify_orthogonal(M: list[list[float]], name: str = "M", tol: float = 1e-6) 
 
 def verify_svd_with_numpy(A_list: list[list[float]], U, sigma, Vt):
     """
-    Kiểm chứng bổ sung bằng numpy (chỉ để so sánh, KHÔNG dùng cho thuật toán).
+    Additional verification using numpy (for comparison only, NOT used for the algorithm).
     """
     try:
         import numpy as np
@@ -446,31 +446,31 @@ def verify_svd_with_numpy(A_list: list[list[float]], U, sigma, Vt):
         print(f"  Singular values (numpy): {s_np.round(6).tolist()}")
         print(f"  Singular values (ours) : {[round(s, 6) for s in sigma]}")
 
-        # So sánh singular values (thứ tự đã giảm dần)
+        # Compare singular values (already sorted descending)
         p = min(len(sigma), len(s_np))
         max_diff = max(abs(sigma[i] - s_np[i]) for i in range(p))
         print(f"  Max |σᵢ - σᵢ_numpy| = {max_diff:.2e}  →  {'✓ OK' if max_diff < 1e-5 else '✗ FAIL'}")
     except ImportError:
-        print("  NumPy không khả dụng, bỏ qua bước kiểm chứng numpy.")
+        print("  NumPy is not available, skipping numpy verification step.")
 
 
 # =============================================================================
-# PHẦN 8: DEMO (CHỈ CHỨA SVD & XẤP XỈ HẠNG THẤP)
+# PART 8: DEMO (CONTAINS SVD & LOW-RANK APPROXIMATION ONLY)
 # =============================================================================
 
 def _list2d(data):
-    """Chuyển list of list về float."""
+    """Convert list of list to floats."""
     return [[float(x) for x in row] for row in data]
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  DEMO: Phân Rã SVD From Scratch")
+    print("  DEMO: SVD Decomposition From Scratch")
     print("=" * 60)
 
     # ------------------------------------------------------------------
-    # Test case 1: Ma trận 3x2
+    # Test case 1: 3x2 matrix
     # ------------------------------------------------------------------
-    print("\n--- Test 1: Ma trận 3x2 ---")
+    print("\n--- Test 1: 3x2 matrix ---")
     A1 = _list2d([
         [1, 2],
         [3, 4],
@@ -482,16 +482,16 @@ if __name__ == "__main__":
     print(f"\n  Singular values: {[round(s, 6) for s in s1]}")
     print_matrix(U1, "U1")
     print_matrix(mat_transpose(Vt1), "V1")
-    print("\nKiểm chứng:")
+    print("\nVerification:")
     verify_svd(A1, U1, s1, Vt1)
     verify_orthogonal(U1, "U1")
     verify_orthogonal(mat_transpose(Vt1), "V1")
     verify_svd_with_numpy(A1, U1, s1, Vt1)
 
     # ------------------------------------------------------------------
-    # Test case 2: Ma trận vuông 3x3
+    # Test case 2: 3x3 square matrix
     # ------------------------------------------------------------------
-    print("\n--- Test 2: Ma trận vuông 3x3 ---")
+    print("\n--- Test 2: 3x3 square matrix ---")
     A2 = _list2d([
         [4, 0, 0],
         [3, 2, 0],
@@ -501,32 +501,32 @@ if __name__ == "__main__":
 
     U2, s2, Vt2 = svd(A2)
     print(f"\n  Singular values: {[round(s, 6) for s in s2]}")
-    print("\nKiểm chứng:")
+    print("\nVerification:")
     verify_svd(A2, U2, s2, Vt2)
     verify_orthogonal(U2, "U2")
     verify_svd_with_numpy(A2, U2, s2, Vt2)
 
     # ------------------------------------------------------------------
-    # Test case 3: Ma trận đặc biệt — có singular value = 0 (hạng thấp)
+    # Test case 3: Special matrix — has singular value = 0 (rank-deficient)
     # ------------------------------------------------------------------
-    print("\n--- Test 3: Ma trận hạng thấp (rank-deficient) ---")
+    print("\n--- Test 3: Rank-deficient matrix ---")
     A3 = _list2d([
         [1, 2, 3],
         [4, 5, 6],
-        [7, 8, 9],   # hàng 3 = hàng 1 + hàng 2 * 2 - ...  (phụ thuộc tuyến tính)
+        [7, 8, 9],   # row 3 = row 1 + row 2 * 2 - ...  (linearly dependent)
     ])
     print_matrix(A3, "A3")
 
     U3, s3, Vt3 = svd(A3)
     print(f"\n  Singular values: {[round(s, 6) for s in s3]}")
-    print("\nKiểm chứng:")
+    print("\nVerification:")
     verify_svd(A3, U3, s3, Vt3)
     verify_svd_with_numpy(A3, U3, s3, Vt3)
 
     # ------------------------------------------------------------------
-    # Test case 4: Xấp xỉ hạng thấp
+    # Test case 4: Low-rank Approximation
     # ------------------------------------------------------------------
-    print("\n--- Test 4: Xấp xỉ hạng thấp (Low-rank Approximation) ---")
+    print("\n--- Test 4: Low-rank Approximation ---")
     A4 = _list2d([
         [3, 2, 2],
         [2, 3, -2],

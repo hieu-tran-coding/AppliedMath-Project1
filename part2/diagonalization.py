@@ -1,50 +1,50 @@
 """
 diagonalization.py
 ==================
-Chéo hóa (Diagonalization) cài đặt từ đầu 
+Diagonalization implemented from scratch
 """
 
-# Import các phép toán cơ sở và thuật toán lặp QR từ file decomposition.py
+# Import basic matrix operations and QR iteration algorithm from decomposition.py
 from decomposition import (
     mat_shape, mat_diag, mat_mul, mat_sub, mat_frobenius_norm,
     print_matrix, _qr_iteration, _sort_eigen, _list2d
 )
 
 # =============================================================================
-# PHẦN 6: CHÉO HÓA (Diagonalization)  A = P D P⁻¹
+# PART 6: DIAGONALIZATION  A = P D P⁻¹
 # =============================================================================
 
 def _mat_inv_2x2(A: list[list[float]]) -> list[list[float]]:
-    """Nghịch đảo ma trận 2x2 (dùng nội bộ)."""
+    """Inverse of a 2x2 matrix (internal use)."""
     det = A[0][0]*A[1][1] - A[0][1]*A[1][0]
     if abs(det) < 1e-12:
-        raise ValueError("Ma trận suy biến, không khả nghịch.")
+        raise ValueError("Singular matrix, not invertible.")
     return [[A[1][1]/det, -A[0][1]/det],
             [-A[1][0]/det, A[0][0]/det]]
 
 def _mat_inv_gauss_jordan(A: list[list[float]]) -> list[list[float]]:
     """
-    Tính ma trận nghịch đảo bằng phương pháp Gauss-Jordan.
+    Compute the inverse matrix using the Gauss-Jordan method.
     [A | I] → [I | A⁻¹]
     """
     n, _ = mat_shape(A)
-    # Tạo ma trận tăng cường [A | I]
+    # Create the augmented matrix [A | I]
     Aug = [A[i][:] + [1.0 if i == j else 0.0 for j in range(n)]
            for i in range(n)]
 
     for col in range(n):
-        # Tìm pivot lớn nhất (partial pivoting)
+        # Find the maximum pivot (partial pivoting)
         max_row = max(range(col, n), key=lambda r: abs(Aug[r][col]))
         Aug[col], Aug[max_row] = Aug[max_row], Aug[col]
 
         pivot = Aug[col][col]
         if abs(pivot) < 1e-12:
-            raise ValueError(f"Ma trận suy biến tại cột {col}.")
+            raise ValueError(f"Singular matrix at column {col}.")
 
-        # Chuẩn hóa hàng pivot
+        # Normalize the pivot row
         Aug[col] = [x / pivot for x in Aug[col]]
 
-        # Khử các hàng khác
+        # Eliminate other rows
         for row in range(n):
             if row == col:
                 continue
@@ -52,19 +52,19 @@ def _mat_inv_gauss_jordan(A: list[list[float]]) -> list[list[float]]:
             Aug[row] = [Aug[row][j] - factor * Aug[col][j]
                         for j in range(2 * n)]
 
-    # Trích phần nghịch đảo
+    # Extract the inverse part
     return [Aug[i][n:] for i in range(n)]
 
 def diagonalize(A: list[list[float]], max_iter: int = 1000, tol: float = 1e-10):
     """
-    Chéo hóa ma trận đối xứng: A = P @ D @ P⁻¹
+    Diagonalize a symmetric matrix: A = P @ D @ P⁻¹
 
-    Tham số:
-        A : ma trận đối xứng n x n
+    Parameters:
+        A : symmetric matrix n x n
 
-    Trả về:
-        P    : ma trận các eigenvectors (mỗi CỘT là một eigenvector)
-        D    : ma trận đường chéo chứa eigenvalues
+    Returns:
+        P    : matrix of eigenvectors (each COLUMN is an eigenvector)
+        D    : diagonal matrix containing eigenvalues
         Pinv : P⁻¹
         eigenvalues : list[float]
     """
@@ -79,14 +79,14 @@ def diagonalize(A: list[list[float]], max_iter: int = 1000, tol: float = 1e-10):
     return P, D, Pinv, eigenvalues
 
 # =============================================================================
-# DEMO TEST CASE (CHÉO HÓA)
+# DEMO TEST CASE (DIAGONALIZATION)
 # =============================================================================
 
 if __name__ == "__main__":
     # ------------------------------------------------------------------
-    # Test case 5: Chéo hóa
+    # Test case 5: Diagonalization
     # ------------------------------------------------------------------
-    print("\n--- Test 5: Chéo Hóa Ma Trận Đối Xứng ---")
+    print("\n--- Test 5: Symmetric Matrix Diagonalization ---")
     A5 = _list2d([
         [4, 1, 0],
         [1, 3, 1],
@@ -98,11 +98,11 @@ if __name__ == "__main__":
     print(f"\n  Eigenvalues: {[round(e, 6) for e in eigs]}")
     print_matrix(D, "D")
 
-    # Kiểm chứng: P @ D @ P⁻¹ ≈ A
+    # Verification: P @ D @ P⁻¹ ≈ A
     A5_rec = mat_mul(mat_mul(P, D), Pinv)
     err5   = mat_frobenius_norm(mat_sub(A5, A5_rec))
     print(f"\n  ||A - PDP⁻¹||_F = {err5:.2e}  →  {'✓ OK' if err5 < 1e-5 else '✗ FAIL'}")
 
     print("\n" + "=" * 60)
-    print("  Tất cả test cases hoàn thành!")
+    print("  All test cases completed!")
     print("=" * 60)
