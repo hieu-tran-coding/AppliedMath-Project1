@@ -1,0 +1,133 @@
+"""Gaussian Elimination with Partial Pivoting — supports m×n matrices."""
+
+
+def gaussian_elimination(A, b):
+    """
+    Row-reduce [A|b] to echelon form, then solve via back_substitution.
+
+    Returns: (M, x, swaps, pivot_cols)
+      M          — augmented matrix in row-echelon form (m × n+1)
+      x          — solution from back_substitution (list or dict)
+      swaps      — number of row swaps performed
+      pivot_cols — column index of each pivot (length = rank)
+    """
+    m, n = len(A), len(A[0])
+
+    # Build augmented matrix M = [A | b]
+    M = [[float(A[i][j]) for j in range(n)] + [float(b[i])] for i in range(m)]
+
+    swaps = 0
+    pivot_cols = []
+    cur = 0  # current pivot row
+
+    # Forward elimination: process each column
+    for col in range(n):
+        if cur >= m:
+            break
+
+        # Partial pivoting: pick row with largest |value| in this column
+        best = cur
+        for i in range(cur + 1, m):
+            if abs(M[i][col]) > abs(M[best][col]):
+                best = i
+
+        if abs(M[best][col]) < 1e-12:
+            continue  # no pivot in this column → free variable
+
+        # Swap best row into pivot position
+        if best != cur:
+            M[cur], M[best] = M[best], M[cur]
+            swaps += 1
+
+        pivot_cols.append(col)
+
+        # Eliminate all entries below the pivot
+        for i in range(cur + 1, m):
+            if abs(M[i][col]) < 1e-12:
+                continue
+            factor = M[i][col] / M[cur][col]
+            for j in range(col, n + 1):
+                M[i][j] -= factor * M[cur][j]
+
+        cur += 1
+
+    # Solve
+    U = [row[:n] for row in M]
+    c = [row[n] for row in M]
+    x = back_substitution(U, c)
+
+    return M, x, swaps, pivot_cols
+
+
+def back_substitution(U, c):
+    """
+    Solve row-echelon system Ux = c.
+
+    Returns:
+      list[float] — if unique solution
+      dict        — if infinite solutions:
+                     {'particular': [...], 'null_space': [[...], ...], 'free_vars': [...]}
+    Raises ValueError if inconsistent (no solution).
+    """
+    m = len(U)
+    n = len(U[0]) if m > 0 else 0
+
+    # Find pivot column for each row (first non-zero entry)
+    pivot_cols = []
+    pivot_rows = set()
+    for i in range(m):
+        for j in range(n):
+            if abs(U[i][j]) > 1e-12:
+                pivot_cols.append(j)
+                pivot_rows.add(i)
+                break
+    rank = len(pivot_cols)
+
+    # Inconsistent: non-pivot row with non-zero RHS → 0 = c[i]
+    for i in range(m):
+        if i not in pivot_rows and abs(c[i]) > 1e-12:
+            raise ValueError(f"Inconsistent: row {i} gives 0 = {c[i]:.6g}")
+
+    # Identify free variable columns (columns without a pivot)
+    pivot_col_set = set(pivot_cols)
+    free_cols = [j for j in range(n) if j not in pivot_col_set]
+
+    # ── Unique solution: no free variables ──
+    if not free_cols:
+        x = [0.0] * n
+        for i in range(rank - 1, -1, -1):
+            total = c[i]
+            for j in range(i + 1, n):
+                total -= U[i][j] * x[j]
+            x[i] = total / U[i][i]
+        return x
+
+    # ── Infinite solutions: free variables exist ──
+
+    # Particular solution: set free vars = 0, solve for pivot vars
+    x_p = [0.0] * n
+    for i in range(rank - 1, -1, -1):
+        pc = pivot_cols[i]
+        total = c[i]
+        for j in range(pc + 1, n):
+            total -= U[i][j] * x_p[j]
+        x_p[pc] = total / U[i][pc]
+
+    # Null-space basis: one vector per free variable
+    # For each free col f, set v[f]=1 (others=0), solve Uv = 0
+    null_space = []
+    for f in free_cols:
+        v = [0.0] * n
+        v[f] = 1.0
+        for i in range(rank - 1, -1, -1):
+            pc = pivot_cols[i]
+            total = sum(U[i][j] * v[j] for j in range(pc + 1, n))
+            v[pc] = -total / U[i][pc]
+        null_space.append(v)
+
+    # General solution: x = x_p + t1*v1 + t2*v2 + ...
+    return {
+        'particular': x_p,
+        'null_space': null_space,
+        'free_vars': free_cols,
+    }
