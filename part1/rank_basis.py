@@ -40,7 +40,7 @@ def rank_and_basis(A):
         vec[free] = 1.0
 
         for i, pc in enumerate(pivot_cols):
-            vec[pc] = -M[i][free]
+            vec[pc] = -M[i][free] / M[i][pc]
 
         null_basis.append(vec)
 
