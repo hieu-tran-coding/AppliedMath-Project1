@@ -1,90 +1,65 @@
 import time
-import random
-import math
+import numpy as np
+from scipy.linalg import hilbert, solve_triangular
 import matplotlib.pyplot as plt
 
-# Import các hàm giải từ file solvers.py của bạn
-from solvers import solve_by_gauss, solve_by_svd, solve_by_gauss_seidel
-
-# =============================================================================
-# CÁC HÀM TIỆN ÍCH (SINH MA TRẬN VÀ TÍNH TOÁN SAI SỐ)
-# =============================================================================
-
 def generate_spd_matrix(n):
-    """
-    Sinh ma trận ngẫu nhiên đối xứng xác định dương (SPD).
-    Cách làm: Tạo ma trận đối xứng, sau đó làm cho nó chéo trội chặt.
-    (Ma trận đối xứng + chéo trội chặt + phần tử đường chéo dương => SPD).
-    """
-    A = [[random.uniform(-10, 10) for _ in range(n)] for _ in range(n)]
-    for i in range(n):
-        for j in range(i + 1, n):
-            A[i][j] = A[j][i]  # Ép đối xứng
-            
-    for i in range(n):
-        row_sum = sum(abs(A[i][j]) for j in range(n) if j != i)
-        A[i][i] = row_sum + random.uniform(1.0, 5.0)  # Ép chéo trội chặt dương
+    A = np.random.uniform(-10, 10, (n, n))
+    A = (A + A.T) / 2  # Ép đối xứng
+    # Tính tổng giá trị tuyệt đối của từng hàng (trừ đường chéo)
+    row_sum = np.sum(np.abs(A), axis=1) - np.abs(np.diag(A))
+    # Ép chéo trội chặt dương
+    np.fill_diagonal(A, row_sum + np.random.uniform(1.0, 5.0, n))
     return A
 
 def generate_hilbert_matrix(n):
-    """Sinh ma trận Hilbert kích thước n x n (Số điều kiện rất lớn)."""
-    return [[1.0 / (i + j + 1) for j in range(n)] for i in range(n)]
+    return hilbert(n)
 
 def generate_vector(n):
-    """Sinh vector ngẫu nhiên kích thước n."""
-    return [random.uniform(-10, 10) for _ in range(n)]
-
-def mat_vec_multiply(A, x):
-    """Nhân ma trận A với vector x."""
-    n = len(A)
-    return [sum(A[i][j] * x[j] for j in range(n)) for i in range(n)]
-
-def l2_norm(v):
-    """Tính chuẩn L2 (Euclidean norm) của vector v."""
-    return math.sqrt(sum(vi ** 2 for vi in v))
+    return np.random.uniform(-10, 10, n)
 
 def compute_relative_error(A, x_hat, b):
-    """
-    Tính sai số tương đối: ||A*x_hat - b||_2 / ||b||_2
-    """
-    Ax = mat_vec_multiply(A, x_hat)
-    residual = [Ax[i] - b[i] for i in range(len(b))]
-    norm_residual = l2_norm(residual)
-    norm_b = l2_norm(b)
-    
+    residual = A @ x_hat - b
+    norm_b = np.linalg.norm(b)
     if norm_b < 1e-12:
-        return norm_residual
-    return norm_residual / norm_b
+        return np.linalg.norm(residual)
+    return np.linalg.norm(residual) / norm_b
 
-# =============================================================================
-# THỰC NGHIỆM ĐO THỜI GIAN VÀ SAI SỐ (BENCHMARK)
-# =============================================================================
+def solve_by_gauss_lib(A, b):
+    return np.linalg.solve(A, b)
+
+def solve_by_svd_lib(A, b):
+    return np.linalg.lstsq(A, b, rcond=None)[0]
+
+def solve_by_gauss_seidel_lib(A, b, tol=1e-6, max_iter=1000):
+    L = np.tril(A) # Ma trận tam giác dưới (bao gồm đường chéo)
+    U = A - L      # Ma trận tam giác trên (không bao gồm đường chéo)
+    x = np.zeros_like(b)
+    
+    for _ in range(max_iter):
+        x_new = solve_triangular(L, b - U @ x, lower=True)
+        if np.linalg.norm(x_new - x) < tol:
+            return x_new
+        x = x_new
+    return x
 
 def run_benchmark():
-    # Kích thước thực tế đồ án yêu cầu: [50, 100, 200, 500, 1000]
-    # Tạm thời để mảng nhỏ để test nhanh xem code chạy ổn không
-    sizes = [20, 50, 100] 
+    sizes = [50, 100, 200, 500, 1000] 
     methods = {
-        "Gauss": solve_by_gauss,
-        "SVD": solve_by_svd,
-        "Gauss-Seidel": solve_by_gauss_seidel
+        "Gauss (NumPy)": solve_by_gauss_lib,
+        "SVD (NumPy)": solve_by_svd_lib,
+        "Gauss-Seidel (SciPy)": solve_by_gauss_seidel_lib
     }
     
-    # Khởi tạo dictionary để lưu kết quả
     avg_times = {name: [] for name in methods}
     errors = {name: [] for name in methods}
     
-    print("BẮT ĐẦU BENCHMARK THỜI GIAN VÀ SAI SỐ:")
-    print("-" * 50)
-    
     for n in sizes:
-        print(f"Đang chạy với kích thước n = {n}...")
-        
-        # Mảng lưu tạm thời gian chạy của 5 lần thử
         times_n = {name: [] for name in methods}
         errors_n = {name: [] for name in methods}
         
-        for _ in range(5): # Chạy 5 lần lấy trung bình
+        # Mở lại 5 vòng lặp cho tất cả kích thước
+        for run_idx in range(5): 
             A = generate_spd_matrix(n)
             b = generate_vector(n)
             
@@ -92,61 +67,39 @@ def run_benchmark():
                 start_time = time.time()
                 try:
                     x_hat = solver_func(A, b)
-                    end_time = time.time()
+                    elapsed = time.time() - start_time
                     
-                    times_n[name].append(end_time - start_time)
+                    times_n[name].append(elapsed)
                     errors_n[name].append(compute_relative_error(A, x_hat, b))
                 except Exception as e:
-                    print(f"  Lỗi ở {name}: {e}")
+                    print(f"    -> Lỗi ở {name}: {e}")
                     
-        # Tính trung bình cho kích thước n
         for name in methods:
             if times_n[name]:
-                avg_times[name].append(sum(times_n[name]) / 5)
-                errors[name].append(sum(errors_n[name]) / 5)
+                avg_times[name].append(sum(times_n[name]) / len(times_n[name]))
+                errors[name].append(sum(errors_n[name]) / len(errors_n[name]))
                 
-    # --- Vẽ đồ thị Log-Log ---
+    # Vẽ đồ thị Log-Log
     plt.figure(figsize=(10, 6))
-    
     for name in methods:
         plt.loglog(sizes, avg_times[name], marker='o', label=f'{name}')
         
-    # Thêm đường O(n^3) lý thuyết để so sánh
-    # Ta chọn một điểm neo (ví dụ điểm đầu của thuật toán Gauss) để vẽ đường O(n^3)
-    if avg_times["Gauss"]:
-        c = avg_times["Gauss"][0] / (sizes[0]**3)
+    if avg_times["Gauss (NumPy)"]:
+        c = avg_times["Gauss (NumPy)"][0] / (sizes[0]**3)
         theoretical_times = [c * (n**3) for n in sizes]
         plt.loglog(sizes, theoretical_times, 'k--', label='Lý thuyết $O(n^3)$')
 
-    plt.title('Đồ thị Log-Log: Thời gian thực thi của các phương pháp giải hệ Ax=b')
+    plt.title('Thời gian thực thi bằng Thư viện C/C++ (NumPy/SciPy)')
     plt.xlabel('Kích thước ma trận n (log scale)')
     plt.ylabel('Thời gian thực thi (giây) (log scale)')
     plt.grid(True, which="both", ls="--")
     plt.legend()
     plt.show()
-    
-    # In ra bảng sai số
-    print("\nSAI SỐ TƯƠNG ĐỐI TRUNG BÌNH (||Ax - b|| / ||b||):")
-    for name in methods:
-        print(f"Phương pháp {name}:")
-        for i, n in enumerate(sizes):
-            print(f"  n = {n:<4}: {errors[name][i]:.5e}")
-
-
-# =============================================================================
-# PHÂN TÍCH TÍNH ỔN ĐỊNH SỐ HỌC (MA TRẬN HILBERT VS SPD)
-# =============================================================================
 
 def analyze_stability():
-    print("\n" + "="*50)
-    print("PHÂN TÍCH TÍNH ỔN ĐỊNH SỐ HỌC (n = 20)")
-    print("="*50)
-    
     n = 20
-    methods = {"Gauss": solve_by_gauss, "SVD": solve_by_svd}
-    # (Tạm bỏ Gauss-Seidel ra khỏi phần này vì ma trận Hilbert không chéo trội, GS sẽ không hội tụ)
+    methods = {"Gauss (NumPy)": solve_by_gauss_lib, "SVD (NumPy)": solve_by_svd_lib}
     
-    # 1. Test với ma trận SPD (Điều kiện tốt)
     print("\n1. Với ma trận ngẫu nhiên SPD (Well-conditioned):")
     A_spd = generate_spd_matrix(n)
     b_spd = generate_vector(n)
@@ -155,7 +108,6 @@ def analyze_stability():
         err = compute_relative_error(A_spd, x_hat, b_spd)
         print(f"  - Sai số ({name}): {err:.5e}")
         
-    # 2. Test với ma trận Hilbert (Điều kiện kém)
     print("\n2. Với ma trận Hilbert (Ill-conditioned):")
     A_hilb = generate_hilbert_matrix(n)
     b_hilb = generate_vector(n)
@@ -167,7 +119,5 @@ def analyze_stability():
         except Exception as e:
             print(f"  - Sai số ({name}): Thất bại ({e})")
 
-
-if __name__ == "__main__":
-    run_benchmark()
-    analyze_stability()
+run_benchmark()
+analyze_stability()
