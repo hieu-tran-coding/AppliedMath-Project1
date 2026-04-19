@@ -64,9 +64,8 @@ python part3/benchmark.py
 Để tạo ra video trực quan hóa phép biến đổi hình học **Rotate - Scale - Rotate** của SVD, bạn di chuyển vào thư mục `part2` và chạy lệnh Manim sau:
 ```bash
 cd part2
-manim -pql manim_scene.py SVDTransformation
+manim -pql manim_scene.py FullPresentation
 ```
-*(Thay `SVDTransformation` bằng tên class Scene thực tế trong file `manim_scene.py` của bạn).*
 - Cờ `-pql` dùng để render nhanh ở chất lượng thấp (Low Quality) nhằm mục đích preview. 
 - Để render chất lượng cao (1080p 60fps), hãy đổi thành `-pqh`.
 
