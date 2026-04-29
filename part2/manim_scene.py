@@ -26,7 +26,7 @@ HOW TO RUN:
 """
 
 from manim import *
-import numpy as np
+import numpy as np  
 
 # ==============================================================
 # COLORS
@@ -79,10 +79,72 @@ def fv2(x):
     return fv(x, d=2)
 
 
+def mat_transpose(A):
+    """Transpose a matrix (list of lists) -> returns list of lists."""
+    return [[A[i][j] for i in range(len(A))] for j in range(len(A[0]))]
+
+
+def mat_mult(A, B):
+    """Multiply two matrices A @ B -> returns list of lists."""
+    A_np = np.array(A, dtype=float)
+    B_np = np.array(B, dtype=float)
+    result = A_np @ B_np
+    return result.tolist()
+
+
+def mat_mult_vec(A, v):
+    """Multiply matrix by vector A @ v -> returns list."""
+    A_np = np.array(A, dtype=float)
+    v_np = np.array(v, dtype=float)
+    result = A_np @ v_np
+    return result.tolist()
+
+
+def vec_divide(v, scalar):
+    """Divide vector by scalar -> returns list."""
+    if abs(scalar) < 1e-12:
+        return [0.0] * len(v)
+    return [x / scalar for x in v]
+
+
+def get_svd(A):
+    """
+    SVD decomposition of matrix A.
+    Returns: (U, singular_values, V_transpose) all as lists
+    """
+    A_np = np.array(A, dtype=float)
+    U_np, s_np, Vt_np = np.linalg.svd(A_np)
+    return U_np.tolist(), s_np.tolist(), Vt_np.tolist()
+
+
+def get_eigh(AtA):
+    """
+    Eigenvalue decomposition of symmetric matrix.
+    Returns: (eigenvalues, eigenvectors) both as lists
+    """
+    AtA_np = np.array(AtA, dtype=float)
+    eigvals, V_mat = np.linalg.eigh(AtA_np)
+    return eigvals.tolist(), V_mat.tolist()
+
+
+def diag_matrix(vals):
+    """Create diagonal matrix from list of values -> returns list of lists."""
+    n = len(vals)
+    return [[vals[i] if i == j else 0.0 for j in range(n)] for i in range(n)]
+
+
+def argsort(arr, reverse=False):
+    """Return indices that would sort an array."""
+    return sorted(range(len(arr)), key=lambda i: arr[i], reverse=reverse)
+
+
+def vec_scalar_mult(v, scalar):
+    """Multiply vector by scalar."""
+    return [x * scalar for x in v]
+
+
 def mat_mob(A, color=WHITE, sc=0.52):
-    """Matrix Mobject from 2D list or numpy array."""
-    if isinstance(A, np.ndarray):
-        A = A.tolist()
+    """Matrix Mobject from 2D list."""
     rows = [[fv(x) for x in row] for row in A]
     return Matrix(rows).set_color(color).scale(sc)
 
@@ -96,14 +158,18 @@ def diag_mob(vals, color=C_SIG, sc=0.52):
 
 def to_screen(xy):
     """Math coords -> Manim screen coords (geometric panel)."""
-    return GEO_SCALE * np.array([xy[0], xy[1], 0.0]) + np.array([GEO_SHIFT[0], GEO_SHIFT[1], 0.0])
+    x_screen = GEO_SCALE * xy[0] + GEO_SHIFT[0]
+    y_screen = GEO_SCALE * xy[1] + GEO_SHIFT[1]
+    return np.array([x_screen, y_screen, 0.0])
 
 
 def unit_circle_image(M, color=WHITE):
-    """Parametric curve: image of unit circle under M."""
-    M_arr = np.array(M, dtype=float)
+    """Parametric curve: image of unit circle under M (M is a list of lists)."""
     def f(t):
-        v = M_arr @ np.array([np.cos(t), np.sin(t)])
+        # Multiply M by [cos(t), sin(t)]
+        cos_t = np.cos(t)
+        sin_t = np.sin(t)
+        v = [M[i][0] * cos_t + M[i][1] * sin_t for i in range(len(M))]
         return to_screen(v)
     return ParametricFunction(f, t_range=[0.0, TAU], color=color, stroke_width=2.8)
 
@@ -302,20 +368,21 @@ def run_svd_theory(sc):
 def run_example_decomposition(sc, A, ex_num, title_str, note_str=""):
     """
     Show the full SVD decomposition of A step by step.
-    Uses numpy ONLY for computing values to display -- not for the algorithm logic shown.
+    Uses numpy internally ONLY for computing values to display.
 
     Layout: all text/matrices on screen, one step at a time.
     """
-    # Compute via numpy (for display values only)
-    AtA              = A.T @ A
-    eigvals, V_mat   = np.linalg.eigh(AtA)
-    order            = np.argsort(-eigvals)
-    eigvals          = eigvals[order]
-    V_mat            = V_mat[:, order]
-    sigmas           = np.sqrt(np.maximum(eigvals, 0.0))
-    U_mat, s_np, Vt_np = np.linalg.svd(A)
-    # Use numpy svd for U for numerical stability in display
-    sigma_list       = list(s_np)
+    # Compute using helper functions (which use numpy internally)
+    AtA              = mat_mult(mat_transpose(A), A)
+    eigvals, V_mat   = get_eigh(AtA)
+    
+    # Sort eigenvalues and eigenvectors by descending eigenvalues
+    order            = argsort(eigvals, reverse=True)
+    eigvals          = [eigvals[i] for i in order]
+    V_mat            = [[V_mat[i][j] for j in order] for i in range(len(V_mat))]
+    
+    U_mat, s_np, Vt_np = get_svd(A)
+    sigma_list       = s_np
 
     # ================================================================
     # SLIDE A -- introduce the matrix
@@ -407,9 +474,9 @@ def run_example_decomposition(sc, A, ex_num, title_str, note_str=""):
     vc_items = VGroup(*[
         VGroup(
             MathTex(fr"\mathbf{{v}}_{i+1} = ", color=C_V, font_size=22),
-            mat_mob(V_mat[:, i].reshape(-1, 1), color=C_V, sc=0.48),
+            mat_mob([[V_mat[j][i]] for j in range(len(V_mat))], color=C_V, sc=0.48),
         ).arrange(RIGHT, buff=0.08)
-        for i in range(V_mat.shape[1])
+        for i in range(len(V_mat[0]))
     ]).arrange(RIGHT, buff=0.5)
     vc_items.next_to(ev_items, DOWN, buff=0.32)
 
@@ -419,11 +486,12 @@ def run_example_decomposition(sc, A, ex_num, title_str, note_str=""):
     sc.wait(WS)
 
     # V matrix
+    V_transpose = mat_transpose(V_mat)
     V_show = VGroup(
         MathTex(r"V = ", color=C_V, font_size=26),
         mat_mob(V_mat, color=C_V, sc=0.52),
         MathTex(r"\Rightarrow\;V^\top = ", color=C_V, font_size=26),
-        mat_mob(V_mat.T, color=C_V, sc=0.52),
+        mat_mob(V_transpose, color=C_V, sc=0.52),
     ).arrange(RIGHT, buff=0.15)
     V_show.next_to(vc_items, DOWN, buff=0.30)
     sc.play(FadeIn(V_show), run_time=AT)
@@ -494,20 +562,24 @@ def run_example_decomposition(sc, A, ex_num, title_str, note_str=""):
     sc.wait(WS)
 
     # Compute u_i for each i
-    for i in range(V_mat.shape[1]):
-        vi    = V_mat[:, i]
+    for i in range(len(V_mat[0])):  # number of columns in V_mat
+        vi    = [V_mat[j][i] for j in range(len(V_mat))]  # get column i
         si    = sigma_list[i]
-        Avi   = A @ vi
-        ui    = Avi / si if si > 1e-12 else np.zeros_like(Avi)
+        Avi   = mat_mult_vec(A, vi)
+        ui    = vec_divide(Avi, si)
+
+        # Convert to column vectors for display
+        Avi_col = [[Avi[j]] for j in range(len(Avi))]
+        ui_col = [[ui[j]] for j in range(len(ui))]
 
         row = VGroup(
             MathTex(fr"\mathbf{{u}}_{i+1}", color=C_U, font_size=22),
             MathTex(r"=\frac{A\,\mathbf{v}_" + str(i+1) + r"}{\sigma_" + str(i+1) + "}",
                     color=C_U, font_size=22),
             MathTex(r"=\frac{1}{" + fv2(si) + r"}", color=C_SIG, font_size=22),
-            mat_mob(Avi.reshape(-1, 1), color=C_A, sc=0.42),
+            mat_mob(Avi_col, color=C_A, sc=0.42),
             MathTex(r"=", font_size=22),
-            mat_mob(ui.reshape(-1, 1), color=C_U, sc=0.44),
+            mat_mob(ui_col, color=C_U, sc=0.44),
         ).arrange(RIGHT, buff=0.12)
 
         if i == 0:
@@ -566,7 +638,7 @@ def run_example_decomposition(sc, A, ex_num, title_str, note_str=""):
     S_part  = VGroup(MathTex(r"\Sigma = ", color=C_SIG, font_size=24),
                      diag_mob(sigma_list, color=C_SIG, sc=0.50)).arrange(RIGHT, buff=0.08)
     Vt_part = VGroup(MathTex(r"V^\top = ", color=C_V, font_size=24),
-                     mat_mob(V_mat.T, color=C_V, sc=0.50)).arrange(RIGHT, buff=0.08)
+                     mat_mob(mat_transpose(V_mat), color=C_V, sc=0.50)).arrange(RIGHT, buff=0.08)
 
     matrices_row = VGroup(A_part, eq_sym, U_part, S_part, Vt_part).arrange(RIGHT, buff=0.18)
     matrices_row.next_to(eq_lbl, DOWN, buff=0.35)
@@ -600,10 +672,11 @@ def run_geometric_meaning(sc, A1, A2, ex1_title, ex2_title):
     Then compare and explain what sigma_1, sigma_2 represent.
     """
 
-    U1, s1, Vt1 = np.linalg.svd(A1)
-    U2, s2, Vt2 = np.linalg.svd(A2)
-    S1 = np.diag(s1)
-    S2 = np.diag(s2)
+    # Get SVD decompositions using helper functions
+    U1, s1, Vt1 = get_svd(A1)
+    U2, s2, Vt2 = get_svd(A2)
+    S1 = diag_matrix(s1)
+    S2 = diag_matrix(s2)
 
     # ================================================================
     # SLIDE A -- Explain the geometric interpretation
@@ -674,7 +747,8 @@ def run_geometric_meaning(sc, A1, A2, ex1_title, ex2_title):
     plane1 = geo_plane()
     sc.play(Create(plane1), run_time=AT)
 
-    circ = unit_circle_image(np.eye(2), color=C_CIRC)
+    IDENTITY_2 = [[1.0, 0.0], [0.0, 1.0]]
+    circ = unit_circle_image(IDENTITY_2, color=C_CIRC)
     sc.play(Create(circ), run_time=AT)
 
     # Single persistent label -- always Transform this one object so old text disappears
@@ -694,14 +768,14 @@ def run_geometric_meaning(sc, A1, A2, ex1_title, ex2_title):
         run_time=ATS)
     sc.wait(WM)
 
-    c2 = unit_circle_image(S1 @ Vt1, color=C_SIG)
+    c2 = unit_circle_image(mat_mult(S1, Vt1), color=C_SIG)
     sc.play(
         Transform(circ, c2),
         Transform(step_lbl1, make_step_lbl("After Sigma V^T  (scale -> ellipse)", plane1)),
         run_time=ATS)
     sc.wait(WM)
 
-    c3 = unit_circle_image(U1 @ S1 @ Vt1, color=C_ELLIP)
+    c3 = unit_circle_image(mat_mult(U1, mat_mult(S1, Vt1)), color=C_ELLIP)
     sc.play(
         Transform(circ, c3),
         Transform(step_lbl1, make_step_lbl(
@@ -709,12 +783,17 @@ def run_geometric_meaning(sc, A1, A2, ex1_title, ex2_title):
         run_time=ATS)
 
     # Mark the two semi-axes
-    ax1 = geo_arrow(U1[:, 0] * s1[0], color=C_SIG)
-    ax2 = geo_arrow(U1[:, 1] * s1[1], color=C_SIG)
+    u1_col = [U1[i][0] for i in range(len(U1))]  # Get column 0 of U1
+    u2_col = [U1[i][1] for i in range(len(U1))]  # Get column 1 of U1
+    ax1_vec = vec_scalar_mult(u1_col, s1[0])
+    ax2_vec = vec_scalar_mult(u2_col, s1[1])
+    
+    ax1 = geo_arrow(ax1_vec, color=C_SIG)
+    ax2 = geo_arrow(ax2_vec, color=C_SIG)
     ax1_lbl = MathTex(fr"\sigma_1={fv2(s1[0])}", color=C_SIG, font_size=18)
     ax2_lbl = MathTex(fr"\sigma_2={fv2(s1[1])}", color=C_SIG, font_size=18)
-    ax1_lbl.move_to(to_screen(U1[:, 0] * s1[0] * 1.25))
-    ax2_lbl.move_to(to_screen(U1[:, 1] * s1[1] * 1.30))
+    ax1_lbl.move_to(to_screen(vec_scalar_mult(ax1_vec, 1.25)))
+    ax2_lbl.move_to(to_screen(vec_scalar_mult(ax2_vec, 1.30)))
 
     sc.play(Create(ax1), Create(ax2), FadeIn(ax1_lbl), FadeIn(ax2_lbl), run_time=AT)
     sc.wait(WL)
@@ -740,7 +819,7 @@ def run_geometric_meaning(sc, A1, A2, ex1_title, ex2_title):
     plane2 = geo_plane()
     sc.play(Create(plane2), run_time=AT)
 
-    circ2 = unit_circle_image(np.eye(2), color=C_CIRC)
+    circ2 = unit_circle_image(IDENTITY_2, color=C_CIRC)
     sc.play(Create(circ2), run_time=AT)
 
     step_lbl2 = make_step_lbl("Unit circle  (before any transform)", plane2)
@@ -754,26 +833,31 @@ def run_geometric_meaning(sc, A1, A2, ex1_title, ex2_title):
         run_time=ATS)
     sc.wait(WM)
 
-    d2 = unit_circle_image(S2 @ Vt2, color=C_SIG)
+    d2 = unit_circle_image(mat_mult(S2, Vt2), color=C_SIG)
     sc.play(
         Transform(circ2, d2),
         Transform(step_lbl2, make_step_lbl("After Sigma V^T  (scale -> ellipse)", plane2)),
         run_time=ATS)
     sc.wait(WM)
 
-    d3 = unit_circle_image(U2 @ S2 @ Vt2, color=C_ELLIP)
+    d3 = unit_circle_image(mat_mult(U2, mat_mult(S2, Vt2)), color=C_ELLIP)
     sc.play(
         Transform(circ2, d3),
         Transform(step_lbl2, make_step_lbl(
             "After U Sigma V^T  (final rotation -- image of A)", plane2)),
         run_time=ATS)
 
-    bx1 = geo_arrow(U2[:, 0] * s2[0], color=C_SIG)
-    bx2 = geo_arrow(U2[:, 1] * s2[1], color=C_SIG)
+    u1_col2 = [U2[i][0] for i in range(len(U2))]  # Get column 0 of U2
+    u2_col2 = [U2[i][1] for i in range(len(U2))]  # Get column 1 of U2
+    bx1_vec = vec_scalar_mult(u1_col2, s2[0])
+    bx2_vec = vec_scalar_mult(u2_col2, s2[1])
+    
+    bx1 = geo_arrow(bx1_vec, color=C_SIG)
+    bx2 = geo_arrow(bx2_vec, color=C_SIG)
     bx1_lbl = MathTex(fr"\sigma_1={fv2(s2[0])}", color=C_SIG, font_size=18)
     bx2_lbl = MathTex(fr"\sigma_2={fv2(s2[1])}", color=C_SIG, font_size=18)
-    bx1_lbl.move_to(to_screen(U2[:, 0] * s2[0] * 1.25))
-    bx2_lbl.move_to(to_screen(U2[:, 1] * s2[1] * 1.30))
+    bx1_lbl.move_to(to_screen(vec_scalar_mult(bx1_vec, 1.25)))
+    bx2_lbl.move_to(to_screen(vec_scalar_mult(bx2_vec, 1.30)))
 
     sc.play(Create(bx1), Create(bx2), FadeIn(bx1_lbl), FadeIn(bx2_lbl), run_time=AT)
     sc.wait(WL)
@@ -904,11 +988,11 @@ def run_summary(sc):
 # EXAMPLE DATA
 # ==============================================================
 
-A1 = np.array([[2.0, 1.0],
-                [1.0, 2.0]])   # symmetric SPD -- clean eigenvalues
+A1 = [[2.0, 1.0],
+       [1.0, 2.0]]   # symmetric SPD -- clean eigenvalues
 
-A2 = np.array([[1.0, 1.0],
-                [0.0, 1.0]])   # shear matrix -- interesting distortion
+A2 = [[1.0, 1.0],
+       [0.0, 1.0]]   # shear matrix -- interesting distortion
 
 
 # ==============================================================
@@ -950,7 +1034,7 @@ class SummaryScene(Scene):
 # FULL PRESENTATION
 # ==============================================================
 
-class demo_video(Scene):
+class FullPresentation(Scene):
     """
     Complete video in one pass.
 
