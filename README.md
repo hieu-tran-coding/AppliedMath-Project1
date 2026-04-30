@@ -71,12 +71,11 @@ manim -pql manim_scene.py FullPresentation
 
 ## Thành viên nhóm (Contributors)
 
+* [Trần Trung Hiếu] - [23120044]
 * [Vũ Hoàng Long] - [23120058]
+* [Võ Tất Toàn] - [23120097]
 * [Bạch Trương Tấn Phát] - [23120316]
-* [Bạch Trương Tấn Phát] - [23120316]
-* [Bạch Trương Tấn Phát] - [23120316]
-* [Bạch Trương Tấn Phát] - [23120316]
+* [Nguyễn Phan Long] - [24120086]
 
 ---
 *Đồ án thuộc môn học Cơ sở Tính toán Khoa học / Toán Ứng Dụng.*
-```
